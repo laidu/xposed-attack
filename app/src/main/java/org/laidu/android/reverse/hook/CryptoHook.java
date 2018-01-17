@@ -1,11 +1,12 @@
 package org.laidu.android.reverse.hook;
 
+import org.laidu.android.reverse.annotation.HookService;
 import org.laidu.android.reverse.util.MethodHookUtil;
 
 /**
  * Created by tczang on 18/1/17.
  */
-
+@HookService
 public class CryptoHook implements Hook {
 
     //        XposedHelpers.findAndHookMethod(Class.forName("javax.crypto.Cipher"), "init", int.class, Certificate.class, MethodHookUtil.methodSignatureHook());

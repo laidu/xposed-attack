@@ -2,6 +2,9 @@ package org.laidu.android.reverse;
 
 import org.laidu.android.reverse.util.MethodHookUtil;
 
+import java.io.File;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -15,19 +18,24 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public class MainApp implements IXposedHookLoadPackage {
 
+    private final static String HOOK_SERVICE_PACKAGE = "org.laidu.android.reverse.hook";
+
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         XposedBridge.log("Loaded app: " + lpparam.packageName);
 
-//        hookAllStringConstructor();
-//        hookAllStringFactoryNewString();
+        File file = new File(MainApp.class.getResource("").getFile());
+        URL url = file.toURI().toURL();
+        ClassLoader loader = new URLClassLoader(new URL[]{url});
+        Class<?> cls = loader.loadClass(HOOK_SERVICE_PACKAGE);//加载指定类，注意一定要带上类的包名
+
+
         hookCrypto();
     }
 
     void hookCrypto() throws ClassNotFoundException {
 
         //int i, java.security.Key key, java.security.spec.AlgorithmParameterSpec algorithmParameterSpec
-
 
 
     }
