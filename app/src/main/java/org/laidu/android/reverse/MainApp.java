@@ -1,15 +1,23 @@
 package org.laidu.android.reverse;
 
-import org.laidu.android.reverse.util.MethodHookUtil;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+
+import org.laidu.android.reverse.annotation.HookService;
+import org.laidu.android.reverse.hook.CryptoHook;
+import org.laidu.android.reverse.hook.Hook;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 
+import dalvik.system.DexFile;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 /**
@@ -24,52 +32,39 @@ public class MainApp implements IXposedHookLoadPackage {
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         XposedBridge.log("Loaded app: " + lpparam.packageName);
 
-        File file = new File(MainApp.class.getResource("").getFile());
+//        startHooks();
+        new CryptoHook().hook();
+    }
+
+    void startHooks() throws IOException, ClassNotFoundException {
+        File file = new File(Hook.class.getResource("").getFile());
         URL url = file.toURI().toURL();
+
+        List<Class<Hook>> hookList = new ArrayList<>();
         ClassLoader loader = new URLClassLoader(new URL[]{url});
-        Class<?> cls = loader.loadClass(HOOK_SERVICE_PACKAGE);//加载指定类，注意一定要带上类的包名
-
-
-        hookCrypto();
+        for (File var : file.listFiles()) {
+            File classFile = var.getCanonicalFile();
+            if (classFile.isFile() && classFile.getName().endsWith(".class")) {
+                Class clazz = loader.loadClass(Hook.class.getPackage().getName() +"."+classFile.getName().replace(".class",""));
+                if (!clazz.getClass().isInterface()) {
+                    for (Class c : clazz.getInterfaces()){
+                        if (c.equals(Hook.class)){
+                            hookList.add(clazz);
+                        }
+                    }
+                }
+            }
+        }
+        hookList.forEach((Class<Hook> hook) -> {
+            try {
+                HookService hookService = hook.getAnnotation(HookService.class);
+                if (hookService !=null && !hookService.ignore()){
+                    hook.newInstance().hook();
+                }
+            } catch (Exception e) {
+                XposedBridge.log(String.format("start %s hook failure",hook.getCanonicalName()));
+            }
+        });
     }
-
-    void hookCrypto() throws ClassNotFoundException {
-
-        //int i, java.security.Key key, java.security.spec.AlgorithmParameterSpec algorithmParameterSpec
-
-
-    }
-
-    void hookAllStringFactoryNewString() throws ClassNotFoundException {
-
-        XposedHelpers.findAndHookMethod(Class.forName("java.lang.StringFactory"), "newStringFromBytes", byte[].class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookMethod(Class.forName("java.lang.StringFactory"), "newStringFromChars", char[].class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookMethod(Class.forName("java.lang.StringFactory"), "newStringFromStringBuffer", StringBuffer.class, MethodHookUtil.methodSignatureHook());
-//        XposedHelpers.callStaticMethod(Class.forName("java.lang.StringFactory"), "newStringFromCodePoints",MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookMethod(Class.forName("java.lang.StringFactory"), "newStringFromStringBuilder", StringBuilder.class, MethodHookUtil.methodSignatureHook());
-    }
-
-    void hookAllStringConstructor() {
-
-        XposedHelpers.findAndHookConstructor(String.class, byte[].class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookConstructor(String.class, byte[].class, String.class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookConstructor(String.class, byte[].class, Charset.class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookConstructor(String.class, byte[].class, int.class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookConstructor(String.class, byte[].class, int.class, int.class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookConstructor(String.class, byte[].class, int.class, int.class, String.class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookConstructor(String.class, byte[].class, int.class, int.class, int.class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookConstructor(String.class, byte[].class, int.class, int.class, Charset.class, MethodHookUtil.methodSignatureHook());
-
-        XposedHelpers.findAndHookConstructor(String.class, char[].class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookConstructor(String.class, char[].class, int.class, int.class, MethodHookUtil.methodSignatureHook());
-
-        XposedHelpers.findAndHookConstructor(String.class, int[].class, int.class, int.class, MethodHookUtil.methodSignatureHook());
-
-        XposedHelpers.findAndHookConstructor(String.class, String.class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookConstructor(String.class, StringBuffer.class, MethodHookUtil.methodSignatureHook());
-        XposedHelpers.findAndHookConstructor(String.class, StringBuilder.class, MethodHookUtil.methodSignatureHook());
-
-    }
-
 
 }

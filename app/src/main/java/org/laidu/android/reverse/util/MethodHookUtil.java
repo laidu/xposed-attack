@@ -2,6 +2,7 @@ package org.laidu.android.reverse.util;
 
 import com.google.gson.Gson;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,6 +18,25 @@ import de.robv.android.xposed.XposedHelpers;
 
 public class MethodHookUtil {
 
+    public static void hookAllConstructor(String className){
+
+        try{
+            for (Constructor<?> constructor : Class.forName(className).getConstructors()) {
+                List<Object> parameterTypesAndCallbackList = new ArrayList<>();
+                parameterTypesAndCallbackList.addAll(Arrays.asList(constructor.getParameterTypes()));
+                parameterTypesAndCallbackList.add(methodSignatureHook());
+                try{
+                    XposedHelpers.findAndHookConstructor(Class.forName(className), parameterTypesAndCallbackList.toArray());
+                }catch (Exception e){
+                    XposedBridge.log(String.format("method not found %s (%s) ",className,new Gson().toJson(constructor.getParameterTypes())));
+                }
+
+            }
+        }catch (ClassNotFoundException e) {
+            XposedBridge.log(String.format("%s not found",className));
+        }
+    }
+
     public static void hookAllMethods(String className){
 
         try {
@@ -24,7 +44,6 @@ public class MethodHookUtil {
                 List<Object> parameterTypesAndCallbackList = new ArrayList<>();
                 parameterTypesAndCallbackList.addAll(Arrays.asList(method.getParameterTypes()));
                 parameterTypesAndCallbackList.add(methodSignatureHook());
-
                 try{
                     XposedHelpers.findAndHookMethod(Class.forName(className), method.getName(), parameterTypesAndCallbackList.toArray());
                 }catch (Exception e){
